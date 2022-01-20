@@ -2,7 +2,7 @@
   Computes the matrix-vector product sqrt(M)·v using a recursive algorithm.  
   For that, it requires a functor in which the () operator takes an output real* array and an input real* (both in device memory if compiled in CUDA mode or host memory otherwise) as:  
   ```c++ 
-  inline operator()(real* in_v, real * out_Mv);
+  inline void operator()(real* in_v, real * out_Mv);
   ```  
   This function must fill "out" with the result of performing the M·v dot product- > out = M·a_v.  
   If M has size NxN and the cost of the dot product is O(M). The total cost of the algorithm is O(m·M). Where m << N.  
