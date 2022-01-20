@@ -51,7 +51,7 @@ Provide the solver with an instance of the functor and the target vector:
     //A vector to store the result of sqrt(M)*v
     thrust::device_vector<real> result(size);
     //A functor that multiplies by a diagonal matrix
-    MatrixDot dot(size);
+	DiagonalMatrix dot(size);
     //Call the solver
     real* d_result = thrust::raw_pointer_cast(result.data());
     real* d_v = thrust::raw_pointer_cast(v.data());
