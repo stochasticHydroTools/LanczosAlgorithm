@@ -50,7 +50,7 @@ Provide the solver with an instance of the functor and the target vector:
     thrust::fill(v.begin(), v.end(), 1);
     //A vector to store the result of sqrt(M)*v
     thrust::device_vector<real> result(size);
-    //A functor that multiplies by the identity matrix times two
+    //A functor that multiplies by a diagonal matrix
     MatrixDot dot(size);
     //Call the solver
     real* d_result = thrust::raw_pointer_cast(result.data());

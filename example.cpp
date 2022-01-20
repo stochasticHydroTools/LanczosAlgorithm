@@ -45,7 +45,7 @@ int main(){
     std::fill(v.begin(), v.end(), 1);
     //A vector to store the result of sqrt(M)*v
     std::vector<real> result(size);
-    //A functor that multiplies by the identity matrix times two
+    //A functor that multiplies by a diagonal matrix
     MatrixDot dot(size);
     //Call the solver
     int numberIterations = lanczos.solve(dot, result.data(), v.data(), size);
