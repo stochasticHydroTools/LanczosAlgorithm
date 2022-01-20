@@ -1,7 +1,7 @@
 /*Raul P. Pelaez 2022. Lanczos Algotihm,
   Computes the matrix-vector product sqrt(M)·v using a recursive algorithm.
   For that, it requires a functor in which the () operator takes an output real* array and an input real* (both device memory) as:
-  inline __host__ __device__ operator()(real* out_Mv, real * in_v);
+  inline void operator()(real* in_v, real * out_Mv);
   This function must fill "out" with the result of performing the M·v dot product- > out = M·a_v.
   If M has size NxN and the cost of the dot product is O(M). The total cost of the algorithm is O(m·M). Where m << N.
   If M·v performs a dense M-V product, the cost of the algorithm would be O(m·N^2).

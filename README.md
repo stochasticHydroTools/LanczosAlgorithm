@@ -2,7 +2,7 @@
   Computes the matrix-vector product sqrt(M)·v using a recursive algorithm.  
   For that, it requires a functor in which the () operator takes an output real* array and an input real* (both in device memory if compiled in CUDA mode or host memory otherwise) as:  
   ```c++ 
-  inline operator()(real* out_Mv, real * a_v);
+  inline operator()(real* in_v, real * out_Mv);
   ```  
   This function must fill "out" with the result of performing the M·v dot product- > out = M·a_v.  
   If M has size NxN and the cost of the dot product is O(M). The total cost of the algorithm is O(m·M). Where m << N.  
@@ -24,10 +24,11 @@ Create the module:
 ```
 Write a functor that computes the product between the original matrix and a given vector, "v":
 ```c++
-//A functor that will return the result of multiplying a certain matrix times a given vector
-struct MatrixDot{
+//A functor that will return the result of multiplying a certain matrix times a given vector.
+//Must inherit from lanczos::MatrixDot
+struct DiagonalMatrix: public lanczos::MatrixDot{
   int size;
-  MatrixDot(int size): size(size){}
+  DiagonalMatrix(int size): size(size){}
   
   void operator()(real* v, real* Mv){
     //An example diagonal matrix

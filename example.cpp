@@ -23,7 +23,7 @@ struct DiagonalMatrix: public lanczos::MatrixDot{
   int size;
   DiagonalMatrix(int size): size(size){}
   
-  virtual void operator()(real* v, real* Mv) override{
+  void operator()(real* v, real* Mv){
     //an example diagonal matrix
     for(int i=0; i<size; i++){
       Mv[i] = (2+i/10.0)*v[i];
