@@ -29,6 +29,13 @@ Some notes:
 #include"utils/debugTools.h"
 #endif
 namespace lanczos{
+
+  struct MatrixDot{
+    
+    virtual void operator()(real* Mv, real*v) = 0;
+    
+  };
+  
   struct Solver{
     Solver(real tolerance = 1e-3);
 
@@ -40,8 +47,20 @@ namespace lanczos{
 
     //Given a Dotctor that computes a product M·v (where M is handled by Dotctor ), computes Bv = sqrt(M)·v
     //Returns the number of iterations performed
-    template<class Dotctor> //B = sqrt(M)
-    int solve(Dotctor &dot, real *Bv, real* v, int N);
+    //B = sqrt(M)
+    int solve(MatrixDot *dot, real *Bv, real* v, int N);
+    
+    //Overload for a shared_ptr
+    int solve(std::shared_ptr<MatrixDot> dot, real *Bv, real* v, int N){
+      return this->solve(dot.get(), Bv, v, N);
+    }
+
+    //Overload for an instance
+    template<class SomeDot>
+    int solve(SomeDot &dot, real *Bv, real* v, int N){
+      MatrixDot* ptr = static_cast<MatrixDot*>(&dot);
+      return this->solve(ptr, Bv, v, N);
+    }
 
     //You can use this array as input to the solve operation, which will save some memory
     real * getV(int N){
@@ -70,8 +89,7 @@ namespace lanczos{
     bool checkConvergence(int current_iterations, real *Bz, real normNoise_prev);
     real computeError(real* Bz, real normNoise_prev);
     real computeNorm(real *v, int numberElements);
-    template<class Dotctor>
-    void computeIteration(Dotctor &dot, int i, real invz2);
+    void computeIteration(MatrixDot *dot, int i, real invz2);
     void registerRequiredStepsForConverge(int steps_needed);
     void resizeIfNeeded(real*z, int N);
     int N;
@@ -94,105 +112,6 @@ namespace lanczos{
     int check_convergence_steps;
     real tolerance;
   };
-
-  template<class Dotctor>
-  int Solver::solve(Dotctor &dot, real *Bz, real*z, int N){
-    //Handles the case of the number of elements changing since last call
-    if(N != this->N){
-      real * d_V = detail::getRawPointer(V);
-      if(z == d_V){
-	throw std::runtime_error("[Lanczos] Size mismatch in input");
-      }
-      numElementsChanged(N);
-    }
-    /*See algorithm I in [1]*/
-    /************v[0] = z/||z||_2*****/
-    /*If z is not the array provided by getV*/
-    real* d_V = detail::getRawPointer(V);
-    if(z != d_V){
-      detail::device_copy(z, z+N, V.begin());
-    }
-    /*1/norm(z)*/
-    real invz2 = 1.0/computeNorm(d_V, N);
-    /*v[0] = v[0]*1/norm(z)*/
-    device_scal(N, &invz2,  d_V, 1);
-    /*Lanczos iterations for Krylov decomposition*/
-    /*Will perform iterations until Error<=tolerance*/
-    int i = -1;
-    real normResult_prev = 1.0; //For error estimation, see eq 27 in [1]
-    while(true){
-      i++;
-      /*Allocate more space if needed*/
-      if(i == max_iter-1){
-#ifdef CUDA_ENABLED
-	CudaSafeCall(cudaDeviceSynchronize());
-#endif
-	this->incrementMaxIterations(2);
-      }
-      computeIteration(dot, i, invz2);
-      /*Check convergence if needed*/
-      if(i >= check_convergence_steps){ //Miminum of 3 iterations, will be auto tuned
-	/*Compute Bz using h and z*/
-	/**** y = ||z||_2 * Vm · H^1/2 · e_1 *****/
-	this->computeCurrentResultEstimation(i, Bz, 1.0/invz2);
-	/*The first time the result is computed it is only stored as oldBz*/
-	if(i>check_convergence_steps){	  
-	  if(checkConvergence(i, Bz, normResult_prev)){
-	    return i;
-	  }
-	}
-	/*Always save the current result as oldBz*/
-	detail::device_copy(Bz, Bz+N, oldBz.begin());
-	/*Store the norm of the result*/
-	real * d_oldBz = detail::getRawPointer(oldBz);
-        device_nrm2(N, d_oldBz, 1, &normResult_prev);
-      }
-    }
-  }
-  
-
-  template<class Dotctor>
-  void Solver::computeIteration(Dotctor &dot, int i, real invz2){
-    real* d_V =  detail::getRawPointer(V);
-    real * d_w = detail::getRawPointer(w);
-    /*w = D·vi*/
-    dot(d_V+N*i, d_w);
-    if(i>0){
-      /*w = w-h[i-1][i]·vi*/
-      real alpha = -hsup[i-1];
-      device_axpy(N,
-		  &alpha,
-		  d_V+N*(i-1), 1,
-		  d_w, 1);
-    }
-    /*h[i][i] = dot(w, vi)*/
-    device_dot(N,
-	       d_w, 1,
-	       d_V+N*i, 1,
-	       &(hdiag[i]));
-    if(i<max_iter-1){
-      /*w = w-h[i][i]·vi*/
-      real alpha = -hdiag[i];
-      device_axpy(N,
-		  &alpha,
-		  d_V+N*i, 1,
-		  d_w, 1);
-      /*h[i+1][i] = h[i][i+1] = norm(w)*/
-      device_nrm2(N, (real*)d_w, 1, &(hsup[i]));
-      /*v_(i+1) = w·1/ norm(w)*/
-      real tol = 1e-3*hdiag[i]*invz2;
-      if(hsup[i]<tol) hsup[i] = real(0.0);
-      if(hsup[i]>real(0.0)){
-	real invw2 = 1.0/hsup[i];
-	device_scal(N, &invw2, d_w, 1);
-      }
-      else{/*If norm(w) = 0 that means all elements of w are zero, so set w = e1*/	
-	detail::device_fill(w.begin(), w.end(), real());
-	w[0] = 1;
-      }
-      detail::device_copy(w.begin(), w.begin()+N, V.begin() + N*(i+1));
-    }
-  }
 }
 
 #ifndef SHARED_LIBRARY_COMPILATION

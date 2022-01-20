@@ -45,6 +45,102 @@ namespace lanczos{
     this->max_iter += inc;
   }
 
+    int Solver::solve(MatrixDot *dot, real *Bz, real*z, int N){
+    //Handles the case of the number of elements changing since last call
+    if(N != this->N){
+      real * d_V = detail::getRawPointer(V);
+      if(z == d_V){
+	throw std::runtime_error("[Lanczos] Size mismatch in input");
+      }
+      numElementsChanged(N);
+    }
+    /*See algorithm I in [1]*/
+    /************v[0] = z/||z||_2*****/
+    /*If z is not the array provided by getV*/
+    real* d_V = detail::getRawPointer(V);
+    if(z != d_V){
+      detail::device_copy(z, z+N, V.begin());
+    }
+    /*1/norm(z)*/
+    real invz2 = 1.0/computeNorm(d_V, N);
+    /*v[0] = v[0]*1/norm(z)*/
+    device_scal(N, &invz2,  d_V, 1);
+    /*Lanczos iterations for Krylov decomposition*/
+    /*Will perform iterations until Error<=tolerance*/
+    int i = -1;
+    real normResult_prev = 1.0; //For error estimation, see eq 27 in [1]
+    while(true){
+      i++;
+      /*Allocate more space if needed*/
+      if(i == max_iter-1){
+#ifdef CUDA_ENABLED
+	CudaSafeCall(cudaDeviceSynchronize());
+#endif
+	this->incrementMaxIterations(2);
+      }
+      computeIteration(dot, i, invz2);
+      /*Check convergence if needed*/
+      if(i >= check_convergence_steps){ //Miminum of 3 iterations, will be auto tuned
+	/*Compute Bz using h and z*/
+	/**** y = ||z||_2 * Vm · H^1/2 · e_1 *****/
+	this->computeCurrentResultEstimation(i, Bz, 1.0/invz2);
+	/*The first time the result is computed it is only stored as oldBz*/
+	if(i>check_convergence_steps){	  
+	  if(checkConvergence(i, Bz, normResult_prev)){
+	    return i;
+	  }
+	}
+	/*Always save the current result as oldBz*/
+	detail::device_copy(Bz, Bz+N, oldBz.begin());
+	/*Store the norm of the result*/
+	real * d_oldBz = detail::getRawPointer(oldBz);
+        device_nrm2(N, d_oldBz, 1, &normResult_prev);
+      }
+    }
+  }
+
+  void Solver::computeIteration(MatrixDot *dot, int i, real invz2){
+    real* d_V =  detail::getRawPointer(V);
+    real * d_w = detail::getRawPointer(w);
+    /*w = D·vi*/
+    dot->operator()(d_V+N*i, d_w);
+    if(i>0){
+      /*w = w-h[i-1][i]·vi*/
+      real alpha = -hsup[i-1];
+      device_axpy(N,
+		  &alpha,
+		  d_V+N*(i-1), 1,
+		  d_w, 1);
+    }
+    /*h[i][i] = dot(w, vi)*/
+    device_dot(N,
+	       d_w, 1,
+	       d_V+N*i, 1,
+	       &(hdiag[i]));
+    if(i<max_iter-1){
+      /*w = w-h[i][i]·vi*/
+      real alpha = -hdiag[i];
+      device_axpy(N,
+		  &alpha,
+		  d_V+N*i, 1,
+		  d_w, 1);
+      /*h[i+1][i] = h[i][i+1] = norm(w)*/
+      device_nrm2(N, (real*)d_w, 1, &(hsup[i]));
+      /*v_(i+1) = w·1/ norm(w)*/
+      real tol = 1e-3*hdiag[i]*invz2;
+      if(hsup[i]<tol) hsup[i] = real(0.0);
+      if(hsup[i]>real(0.0)){
+	real invw2 = 1.0/hsup[i];
+	device_scal(N, &invw2, d_w, 1);
+      }
+      else{/*If norm(w) = 0 that means all elements of w are zero, so set w = e1*/	
+	detail::device_fill(w.begin(), w.end(), real());
+	w[0] = 1;
+      }
+      detail::device_copy(w.begin(), w.begin()+N, V.begin() + N*(i+1));
+    }
+  }
+
   //Computes the current result guess sqrt(M)·v, stores in BdW
   void Solver::computeCurrentResultEstimation(int iter, real * BdW, real z2){
     iter++;

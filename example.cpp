@@ -19,11 +19,11 @@ References:
 // precision as the library.
 using real = lanczos::real;
 //A functor that will return the result of multiplying a certain matrix times a given vector
-struct MatrixDot{
+struct DiagonalMatrix: public lanczos::MatrixDot{
   int size;
-  MatrixDot(int size): size(size){}
+  DiagonalMatrix(int size): size(size){}
   
-  void operator()(real* v, real* Mv){
+  virtual void operator()(real* v, real* Mv) override{
     //an example diagonal matrix
     for(int i=0; i<size; i++){
       Mv[i] = (2+i/10.0)*v[i];
@@ -46,7 +46,7 @@ int main(){
     //A vector to store the result of sqrt(M)*v
     std::vector<real> result(size);
     //A functor that multiplies by a diagonal matrix
-    MatrixDot dot(size);
+    DiagonalMatrix dot(size);
     //Call the solver
     int numberIterations = lanczos.solve(dot, result.data(), v.data(), size);
     std::cout<<"Solved after "<<numberIterations<< " iterations"<<std::endl;

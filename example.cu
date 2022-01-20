@@ -19,9 +19,9 @@ References:
 using real = lanczos::real;
 
 //A functor that will return the result of multiplying a certain matrix times a given vector
-struct MatrixDot{
+struct DiagonalMatrix: public lanczos::MatrixDot{
   int size;
-  MatrixDot(int size): size(size){}
+  DiagonalMatrix(int size): size(size){}
   
   void operator()(real* v, real* Mv){
     //An example diagonal matrix
@@ -46,7 +46,7 @@ int main(){
     //A vector to store the result of sqrt(M)*v
     lanczos::device_container<real> result(size);
     //A functor that multiplies by ta diagonal matrix
-    MatrixDot dot(size);
+    DiagonalMatrix dot(size);
     //Call the solver
     real* d_result = lanczos::detail::getRawPointer(result);
     real* d_v = lanczos::detail::getRawPointer(v);

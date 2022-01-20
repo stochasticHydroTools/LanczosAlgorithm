@@ -4,7 +4,7 @@ NVCC=nvcc
 CXX=g++
 
 #Uncomment for a GPU enabled library
-#CUDA_ENABLED=-DCUDA_ENABLED
+CUDA_ENABLED=-DCUDA_ENABLED
 
 #Uncomment to compile in double precision mode
 #DOUBLE_PRECISION=-DDOUBLE_PRECISION
