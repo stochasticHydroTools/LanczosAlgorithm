@@ -44,8 +44,7 @@ Provide the solver with an instance of the functor and the target vector:
 
 ```c++
     int size = 10;
-    //A vector filled with 1.
-    //Lanczos defines this type for convenience. It will be a thrust::device_vector if CUDA_ENABLED is defined and an std::vector otherwise
+    //A GPU vector filled with ones.
     thrust::device_vector<real> v(size);
     thrust::fill(v.begin(), v.end(), 1);
     //A vector to store the result of sqrt(M)*v
