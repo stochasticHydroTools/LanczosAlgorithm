@@ -9,6 +9,10 @@ References:
 #include<string.h>
 #include"utils/lapack_and_blas_defines.h"
 #include<stdexcept>
+#ifdef CUDA_ENABLED
+#include"utils/debugTools.h"
+#endif
+
 namespace lanczos{
 
   Solver::Solver(real tolerance):
@@ -23,6 +27,18 @@ namespace lanczos{
 #endif    
   }
 
+  Solver::~Solver(){
+#ifdef CUDA_ENABLED
+    CublasSafeCall(cublasDestroy(cublas_handle));
+#endif
+  }
+
+  real* Solver::getV(int N){
+    if(N != this->N) numElementsChanged(N);
+    return detail::getRawPointer(V);
+  }
+
+  
   void Solver::numElementsChanged(int newN){
     this-> N = newN;
     try{
@@ -45,7 +61,7 @@ namespace lanczos{
     this->max_iter += inc;
   }
 
-    int Solver::solve(MatrixDot *dot, real *Bz, real*z, int N){
+    int Solver::solve(MatrixDot *dot, real *Bz, const real*z, int N){
     //Handles the case of the number of elements changing since last call
     if(N != this->N){
       real * d_V = detail::getRawPointer(V);
@@ -103,7 +119,8 @@ namespace lanczos{
     real* d_V =  detail::getRawPointer(V);
     real * d_w = detail::getRawPointer(w);
     /*w = D·vi*/
-    dot->operator()(d_V+N*i, d_w);
+    dot->setSize(N);
+    dot->dot(d_V+N*i, d_w);
     if(i>0){
       /*w = w-h[i-1][i]·vi*/
       real alpha = -hsup[i-1];

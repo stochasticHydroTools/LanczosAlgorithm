@@ -24,49 +24,33 @@ Some notes:
 #include<vector>
 #include<memory>
 #include"utils/device_container.h"
-
-#ifdef CUDA_ENABLED
-#include"utils/debugTools.h"
-#endif
+#include"utils/MatrixDot.h"
 namespace lanczos{
 
-  struct MatrixDot{
-    
-    virtual void operator()(real* Mv, real*v) = 0;
-    
-  };
-  
   struct Solver{
     Solver(real tolerance = 1e-3);
 
-    ~Solver(){
-#ifdef CUDA_ENABLED
-      CublasSafeCall(cublasDestroy(cublas_handle));
-#endif
-    }
-
+    ~Solver();
+    
     //Given a Dotctor that computes a product M·v (where M is handled by Dotctor ), computes Bv = sqrt(M)·v
     //Returns the number of iterations performed
     //B = sqrt(M)
-    int solve(MatrixDot *dot, real *Bv, real* v, int N);
+    int solve(MatrixDot *dot, real *Bv, const real* v, int N);
     
     //Overload for a shared_ptr
-    int solve(std::shared_ptr<MatrixDot> dot, real *Bv, real* v, int N){
+    int solve(std::shared_ptr<MatrixDot> dot, real *Bv, const real* v, int N){
       return this->solve(dot.get(), Bv, v, N);
     }
 
     //Overload for an instance
     template<class SomeDot>
-    int solve(SomeDot &dot, real *Bv, real* v, int N){
+    int solve(SomeDot &dot, real *Bv, const real* v, int N){
       MatrixDot* ptr = static_cast<MatrixDot*>(&dot);
       return this->solve(ptr, Bv, v, N);
     }
 
     //You can use this array as input to the solve operation, which will save some memory
-    real * getV(int N){
-      if(N != this->N) numElementsChanged(N);
-      return detail::getRawPointer(V);
-    }
+    real * getV(int N);
 
 #ifdef CUDA_ENABLED
     //The solver will use this cuda stream when possible

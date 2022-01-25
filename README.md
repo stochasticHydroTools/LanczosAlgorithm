@@ -78,6 +78,14 @@ Note, however, that the heavy-weight of this solver comes from the Matrix-vector
 
 See the Makefile for further instructions.  
 
+## Python interface
+
+The python/ folder contains a python wrapper to the solver. A class defining the matrix vector product can be written directly in python an provided to the solver.
+See python/example.py for more information.
+
+The root folder's Makefile will try to compile the python library as well. It expects pybind11 to be placed under the extern/ folder. Pybind11 is included as a submodule, so make sure to clone this repository with --recursive.
+Note that the python wrapper can only be compiled in CPU mode.
+
 ## References:  
 
   [1] Krylov subspace methods for computing hydrodynamic interactions in Brownian dynamics simulations  J. Chem. Phys. 137, 064106 (2012); doi: 10.1063/1.4742347  
