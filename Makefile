@@ -13,16 +13,24 @@ PYBIND_INCLUDE=extern/pybind11/include
 #Uncomment to compile in double precision mode
 #DOUBLE_PRECISION=-DDOUBLE_PRECISION
 
+#Lapack/Cblas related flags
+LAPACKE_FLAGS=
+LAPACKE_LIBS=-llapacke -lcblas
+
+#Alternativeky you can use MKL
+#LAPACKE_FLAGS= -I$(MKLROOT)/include -L$(MKLROOT)/lib/intel64 -DUSE_MKL
+#LAPACKE_LIBS= -lmkl_rt -lpthread -ldl
+
 
 INCLUDEFLAGS=-Iinclude/
 NVCCLDFLAGS= -lcublas
-LDFLAGS= -llapacke -lcblas
+LDFLAGS= $(LAPACKE_LIBS)
 
 LIBNAME=liblanczos.so
 PYTHON_MODULE_NAME=Lanczos
 
 
-CXXFLAGS=-fPIC -w -O3 -g -std=c++14 $(INCLUDEFLAGS) $(DOUBLE_PRECISION)
+CXXFLAGS=-fPIC -w -O3 -g -std=c++14 $(INCLUDEFLAGS) $(DOUBLE_PRECISION) $(LAPACKE_FLAGS)
 NVCCFLAGS=-ccbin=$(CXX) -Xcompiler "$(CXXFLAGS)" -std=c++14 -O3 $(INCLUDEFLAGS) $(DOUBLE_PRECISION) $(CUDA_ENABLED)
 
 PYTHON_LIBRARY_NAME=python/$(PYTHON_MODULE_NAME)$(shell $(PYTHON3)-config --extension-suffix)

@@ -8,6 +8,7 @@ References:
 #include"LanczosAlgorithm.h"
 #include<string.h>
 #include"utils/lapack_and_blas_defines.h"
+#include<cmath>
 #include<stdexcept>
 #ifdef CUDA_ENABLED
 #include"utils/debugTools.h"
