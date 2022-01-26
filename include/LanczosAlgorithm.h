@@ -83,7 +83,7 @@ namespace lanczos{
 #endif
     /*Maximum number of Lanczos iterations*/
     int max_iter; //<100 in general, increases as needed
-    int iterationHardLimit = 100; //Do not perform more than this iterations
+    int iterationHardLimit = 1000; //Do not perform more than this iterations
     /*Lanczos algorithm auxiliar memory*/
     device_container<real> w; //size N, v in each iteration
     device_container<real> V; //size Nxmax_iter; Krylov subspace base transformation matrix

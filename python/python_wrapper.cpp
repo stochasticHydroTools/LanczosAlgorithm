@@ -5,7 +5,7 @@
 #include<pybind11/pybind11.h>
 #include<pybind11/numpy.h>
 #include<iostream>
-
+#include<stdexcept>
 using real = lanczos::real;
 
 namespace py = pybind11;
@@ -27,6 +27,9 @@ struct MatrixDotTrampoline: public lanczos::MatrixDot{
       // Call the Python function.
       py::array_t<real> Mvp = overridef(py::array_t<real, py::array::c_style>(this->m_size, v, dummy));
       std::copy(Mvp.data(), Mvp.data()+this->m_size, Mv);
+    }
+    else{
+      throw std::runtime_error("[PyLanczos] The required dot function was not found in the provided functor.");
     }
   }
 };
