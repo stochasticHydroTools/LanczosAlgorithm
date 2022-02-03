@@ -20,8 +20,8 @@ class DiagonalMatrix(Lanczos.MatrixDot):
         Mv = v*2.0
         return Mv
 
-#Create the solver and provide a tolerance
-solver = Lanczos.Solver(tolerance=1e-3)
+#Create the solver
+solver = Lanczos.Solver()
 
 #Let us compute the result of sqrt(2*I)*v, where v=[1,1,1....1] and I the identity matrix
 #The result vector will be filled with sqrt(2)
@@ -30,9 +30,10 @@ result = np.zeros(size, precision);
 v = np.ones(size, precision);
 
 dotProduct = DiagonalMatrix()
-#The solve function fills the result vector with sqrt(M)*v and returns the number of iterations required to do so.
-numiter = solver.solve(dotProduct, result,v, size)
+#The solve function fills the result vector with sqrt(M)*v and returns the residual at the last iteration.
+numIter = 2
+error = solver.runIterations(dotProduct, result,v, numIter, size)
 
-print("Done after "+ str(numiter) + " iterations.")
+print("Done after "+ str(numIter) + " iterations with a residual of " + str(error)+ ".")
 print("Result vector (should be filled with ~sqrt(2)="+str(np.sqrt(2))+"):")
 print(result)

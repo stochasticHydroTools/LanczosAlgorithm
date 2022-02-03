@@ -6,10 +6,15 @@ Simply defer the calls to the actual lanczos solver code.
 
 using namespace lanczos;
 
-LanczosTrampoline::LanczosTrampoline(real tolerance):
-  solver(std::make_shared<lanczos::Solver>(tolerance)){}
+LanczosTrampoline::LanczosTrampoline():
+  solver(std::make_shared<lanczos::Solver>()){}
 
-int LanczosTrampoline::solve(MatrixDot *dot, real* result, const real* v, int size){
-  int numberIterations = solver->solve(dot, result, v, size);
+int LanczosTrampoline::run(MatrixDot *dot, real* result, const real* v, real tolerance, int size){
+  int numberIterations = solver->run(dot, result, v, tolerance, size);
   return numberIterations;
+}
+
+real LanczosTrampoline::runIterations(MatrixDot *dot, real* result, const real* v, int numberIterations, int size){
+  real residual = solver->runIterations(dot, result, v, numberIterations, size);
+  return residual;
 }

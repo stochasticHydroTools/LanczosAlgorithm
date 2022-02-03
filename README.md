@@ -1,14 +1,15 @@
 # Lanczos solver,
   Computes the matrix-vector product sqrt(M)·v using a recursive algorithm.  
-  For that, it requires a functor in which the () operator takes an output real* array and an input real* (both in device memory if compiled in CUDA mode or host memory otherwise) as:  
+  For that, it requires a functor with a "dot" function that takes an output real* array and an input real* (both in device memory if compiled in CUDA mode or host memory otherwise) as:  
   ```c++ 
-  inline void operator()(real* in_v, real * out_Mv);
+	virtual void dot(real* in_v, real * out_Mv) override;
   ```  
+  The functor must inherit ```lanczos::MatrixDot``` (see example.cu).
   This function must fill "out" with the result of performing the M·v dot product- > out = M·a_v.  
   If M has size NxN and the cost of the dot product is O(M). The total cost of the algorithm is O(m·M). Where m << N.  
   If M·v performs a dense M-V product, the cost of the algorithm would be O(m·N^2).  
 
-This is a header-only library, although a shared library can be 
+This is a header-only library, although a shared library can be compiled instead.
 
 ## Usage:  
 
@@ -19,8 +20,8 @@ Let us go through the remaining one, a GPU-only example.
 
 Create the module:
 ```c++
-	real tolerance = 1e-6;
-    lanczos::Solver lanczos(tolerance);
+
+    lanczos::Solver lanczos;
 ```
 Write a functor that computes the product between the original matrix and a given vector, "v":
 ```c++
@@ -30,7 +31,7 @@ struct DiagonalMatrix: public lanczos::MatrixDot{
   int size;
   DiagonalMatrix(int size): size(size){}
   
-  void operator()(real* v, real* Mv){
+  void dot(real* v, real* Mv) override{
     //An example diagonal matrix
     for(int i=0; i<size; i++){
       Mv[i] = 2*v[i];
@@ -54,10 +55,14 @@ Provide the solver with an instance of the functor and the target vector:
 	DiagonalMatrix dot(size);
     //Call the solver
     real* d_result = thrust::raw_pointer_cast(result.data());
-    real* d_v = thrust::raw_pointer_cast(v.data());
-    int numberIterations = lanczos.solve(dot, d_result, d_v, size);
+    real* d_v = thrust::raw_pointer_cast(v.data()); 
+	real tolerance = 1e-6;
+    int numberIterations = lanczos.run(dot, d_result, d_v, tolerance, size);
+	int iterations = 100;
+	int residual = lanczos.runIterations(dot, d_result, d_v, iterations, size);
 ```
-The solve function returns the number of iterations that were needed to achieve the requested accuracy.
+The run function returns the number of iterations that were needed to achieve the requested accuracy.
+The runIterations returns the residual after the requested iterations.
 
 ## Other functions:  
 

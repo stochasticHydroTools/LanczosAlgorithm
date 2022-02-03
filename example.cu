@@ -37,7 +37,7 @@ int main(){
   {
     //Initialize the solver
     real tolerance = 1e-6;
-    lanczos::Solver lanczos(tolerance);
+    lanczos::Solver lanczos;
     int size = 10;
     //A vector filled with 1.
     //Lanczos defines this type for convenience. It will be a thrust::device_vector if CUDA_ENABLED is defined and an std::vector otherwise
@@ -50,7 +50,7 @@ int main(){
     //Call the solver
     real* d_result = lanczos::detail::getRawPointer(result);
     real* d_v = lanczos::detail::getRawPointer(v);
-    int numberIterations = lanczos.solve(dot, d_result, d_v, size);
+    int numberIterations = lanczos.run(dot, d_result, d_v, tolerance, size);
     std::cout<<"Solved after "<<numberIterations<< " iterations"<<std::endl;
     //Now result is filled with sqrt(M)*v = sqrt(2)*[1,1,1...1]
     std::cout<<"Result: ";for(int i = 0; i<10; i++) std::cout<<result[i]<<" "; std::cout<<std::endl;

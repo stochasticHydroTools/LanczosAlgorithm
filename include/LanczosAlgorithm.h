@@ -28,73 +28,39 @@ Some notes:
 namespace lanczos{
 
   struct Solver{
-    Solver(real tolerance = 1e-3);
+    Solver();
 
     ~Solver();
     
     //Given a Dotctor that computes a product M·v (where M is handled by Dotctor ), computes Bv = sqrt(M)·v
-    //Returns the number of iterations performed
+    //Returns the number of iterations required to achieve the requested tolerance
     //B = sqrt(M)
-    int solve(MatrixDot *dot, real *Bv, const real* v, int N);
-    
-    //Overload for a shared_ptr
-    int solve(std::shared_ptr<MatrixDot> dot, real *Bv, const real* v, int N){
-      return this->solve(dot.get(), Bv, v, N);
+    int run(MatrixDot *dot, real *Bv, const real* v, real tolerance, int N);
+    int run(MatrixDot &dot, real *Bv, const real* v, real tolerance, int N){
+      return run(&dot, Bv, v, tolerance, N);
+    }
+    //Given a Dotctor that computes a product M·v (where M is handled by Dotctor ), computes Bv = sqrt(M)·v
+    //Returns the residual after numberIterations iterations
+    //B = sqrt(M)
+    real runIterations(MatrixDot *dot, real *Bz, const real*z, int numberIterations, int N);
+    real runIterations(MatrixDot &dot, real *Bv, const real* v, int numberIterations, int N){
+      return runIterations(&dot, Bv, v, numberIterations, N);
     }
 
-    //Overload for an instance
-    template<class SomeDot>
-    int solve(SomeDot &dot, real *Bv, const real* v, int N){
-      MatrixDot* ptr = static_cast<MatrixDot*>(&dot);
-      return this->solve(ptr, Bv, v, N);
-    }
-
-    //You can use this array as input to the solve operation, which will save some memory
-    real * getV(int N);
-
-#ifdef CUDA_ENABLED
-    //The solver will use this cuda stream when possible
-    void setCudaStream(cudaStream_t st){
-      this->st = st;
-      CublasSafeCall(cublasSetStream(cublas_handle, st));
-    }
-#endif
-
-    //Set the maximum number of iterations allowed before throwing an exception
-    void setIterationHardLimit(int newlimit){
-      this->iterationHardLimit = newlimit;
-    }
+    void setIterationHardLimit(int newLimit){this->iterationHardLimit = newLimit;}
     
   private:
-    void computeCurrentResultEstimation(int iter, real *BdW, real z2);
     //Increases storage space
-    void incrementMaxIterations(int inc);
-    void numElementsChanged(int Nnew);
-    bool checkConvergence(int current_iterations, real *Bz, real normNoise_prev);
-    real computeError(real* Bz, real normNoise_prev);
-    real computeNorm(real *v, int numberElements);
-    void computeIteration(MatrixDot *dot, int i, real invz2);
+    real computeError(real* Bz, int N);
     void registerRequiredStepsForConverge(int steps_needed);
-    void resizeIfNeeded(real*z, int N);
-    int N;
+
 #ifdef CUDA_ENABLED
     cublasHandle_t cublas_handle;
     cudaStream_t st = 0;
 #endif
-    /*Maximum number of Lanczos iterations*/
-    int max_iter; //<100 in general, increases as needed
-    int iterationHardLimit = 1000; //Do not perform more than this iterations
-    /*Lanczos algorithm auxiliar memory*/
-    device_container<real> w; //size N, v in each iteration
-    device_container<real> V; //size Nxmax_iter; Krylov subspace base transformation matrix
-    //Mobility Matrix in the Krylov subspace
-    std::vector<real> P;    //Transformation Matrix to diagonalize H, max_iter x max_iter
-    /*upper diagonal and diagonal of H*/
-    std::vector<real> hdiag, hsup, htemp;
-    device_container<real> htempGPU;
     device_container<real> oldBz;
     int check_convergence_steps;
-    real tolerance;
+    int iterationHardLimit = 200;
   };
 }
 

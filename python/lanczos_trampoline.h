@@ -15,9 +15,10 @@ namespace lanczos{
 class LanczosTrampoline{
   std::shared_ptr<lanczos::Solver> solver;
 public:
-  LanczosTrampoline(lanczos::real tolerance);
+  LanczosTrampoline();
 
-  int solve(lanczos::MatrixDot *dot, lanczos::real* result, const lanczos::real* v, int size);
+  int run(lanczos::MatrixDot *dot, lanczos::real* result, const lanczos::real* v, lanczos::real tolerance, int size);
+  lanczos::real runIterations(lanczos::MatrixDot *dot, lanczos::real* result, const lanczos::real* v, int numberIterations, int size);
   
 };
 
