@@ -147,7 +147,7 @@ namespace lanczos{
 	auto d_w = detail::getRawPointer(w);	
 	/*w = D·vi*/
 	dot->setSize(N);
-	dot->dot(d_V+N*i, d_w);
+	dot->operator()(d_V+N*i, d_w);
 	if(i>0){
 	  /*w = w-h[i-1][i]·vi*/
 	  real alpha = -hsup[i-1];

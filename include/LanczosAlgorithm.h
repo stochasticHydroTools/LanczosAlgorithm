@@ -22,7 +22,8 @@ Some notes:
 #include"utils/defines.h"
 #include"utils/device_blas.h"
 #include<vector>
-#include<memory>
+#include <memory>
+#include<functional>
 #include"utils/device_container.h"
 #include"utils/MatrixDot.h"
 namespace lanczos{
@@ -39,12 +40,20 @@ namespace lanczos{
     int run(MatrixDot &dot, real *Bv, const real* v, real tolerance, int N){
       return run(&dot, Bv, v, tolerance, N);
     }
+    int run(std::function<void(real*, real*)> dot, real *Bv, const real* v, real tolerance, int N){
+      auto lanczos_dot = createMatrixDotAdaptor(dot);
+      return run(lanczos_dot, Bv, v, tolerance, N);
+    }
     //Given a Dotctor that computes a product M·v (where M is handled by Dotctor ), computes Bv = sqrt(M)·v
     //Returns the residual after numberIterations iterations
     //B = sqrt(M)
     real runIterations(MatrixDot *dot, real *Bz, const real*z, int numberIterations, int N);
     real runIterations(MatrixDot &dot, real *Bv, const real* v, int numberIterations, int N){
       return runIterations(&dot, Bv, v, numberIterations, N);
+    }
+    real runIterations(std::function<void(real*, real*)> dot, real *Bv, const real* v, int numberIterations, int N){
+      auto lanczos_dot = createMatrixDotAdaptor(dot);
+      return runIterations(lanczos_dot, Bv, v, numberIterations, N);
     }
 
     void setIterationHardLimit(int newLimit){this->iterationHardLimit = newLimit;}

@@ -15,8 +15,12 @@ using namespace pybind11::literals;
 //This class allows to inherit lanczos::MatrixDot from python
 struct MatrixDotTrampoline: public lanczos::MatrixDot{  
   using MatrixDot::MatrixDot;
-  
-  void dot(real* v, real* Mv) override{
+
+  void dot(real* v, real* Mv){
+    this->operator()(v, Mv);
+  }
+
+  void operator()(real* v, real* Mv) override{
     pybind11::gil_scoped_acquire gil;  // Acquire the GIL while in this scope.
     // Try to look up the overridden method on the Python side.
     pybind11::function overridef = pybind11::get_override(this, "dot");
@@ -60,7 +64,7 @@ public:
 PYBIND11_MODULE(LANCZOS_PYTHON_NAME, m){
   py::class_<lanczos::MatrixDot, MatrixDotTrampoline>(m, "MatrixDot", "The virtual class required by the Lanczos solver").
     def(py::init<>()).
-    def("dot", &lanczos::MatrixDot::dot,
+    def("dot", &lanczos::MatrixDot::operator(),
 	"Given a result (Mv) and a vector (v), this method must write in Mv the result of multiplying the target matrix and v.",
 	"v"_a, "The input vector", "Mv"_a, "The output result vector");
 
